@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invitar alumnos — Tutor de TFM</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body>
+  <header id="app-nav"></header>
+  <main class="page">
+    <button class="back-link" onclick="window.location.href='index.html'">&larr; Admin</button>
+    <div class="header">
+      <h1>Invitar alumnos</h1>
+      <p>El alta de alumnos ya no es pública: solo tú puedes dar acceso, uno a uno o subiendo un Excel con toda la lista. Cada persona recibe un email para crear su propia contraseña.</p>
+    </div>
+
+    <div class="card">
+      <h3 class="f-display" style="font-size:16px;margin-bottom:10px">Invitar a una persona</h3>
+      <form id="invite-form" class="stack">
+        <div>
+          <label for="email">Email del alumno</label>
+          <input id="email" type="email" required />
+        </div>
+        <div>
+          <label for="full_name">Nombre completo (opcional)</label>
+          <input id="full_name" type="text" />
+        </div>
+        <button type="submit" id="submit-btn">Enviar invitación</button>
+        <p id="error" class="error-msg" hidden></p>
+        <p id="success" class="success-msg" hidden></p>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3 class="f-display" style="font-size:16px;margin-bottom:6px">Invitar en bloque desde un Excel</h3>
+      <p class="muted" style="margin-bottom:10px">Sube un archivo .xlsx o .xls con una columna de nombre y otra de email (detecto las columnas automáticamente por su cabecera — no hace falta un formato exacto). Cada fila recibirá su propia invitación.</p>
+      <input type="file" id="excel-file" accept=".xlsx,.xls" />
+      <div id="excel-preview" style="margin-top:12px"></div>
+      <div id="excel-actions" style="margin-top:12px" hidden>
+        <button id="excel-enviar">Enviar invitaciones</button>
+      </div>
+      <div id="excel-resultados" style="margin-top:12px"></div>
+      <p id="excel-error" class="error-msg" hidden></p>
+    </div>
+  </main>
+  <script type="module" src="../js/page-admin-invitar-alumnos.js"></script>
+</body>
+</html>

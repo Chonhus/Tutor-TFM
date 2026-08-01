@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tutor de TFM — Iniciar sesión</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="splash" class="splash">
+    <span class="splash-logo-fallback">Tutor de TFM</span>
+  </div>
+  <main class="page page-narrow">
+    <div class="card" id="set-password-card" hidden>
+      <h1>Crea tu contraseña</h1>
+      <p class="muted" style="margin-top:6px">Ya casi está — elige una contraseña para acceder al Tutor de TFM.</p>
+      <form id="set-password-form" class="stack" style="margin-top:16px">
+        <div>
+          <label for="new-password">Contraseña (mínimo 6 caracteres)</label>
+          <input id="new-password" type="password" required minlength="6" autocomplete="new-password" />
+        </div>
+        <button type="submit">Guardar y entrar</button>
+        <p id="set-password-error" class="error-msg" hidden></p>
+      </form>
+    </div>
+
+    <div class="card" id="login-card">
+      <div class="eyebrow">Itinerario guiado · Ciencias de la salud</div>
+      <h1>Tutor de TFM</h1>
+      <p class="muted" style="margin-top:6px">Una guía por fases para elaborar tu Trabajo Fin de Máster. La IA corrige y orienta tu trabajo; la redacción es siempre tuya.</p>
+      <form id="login-form" class="stack" style="margin-top:20px">
+        <div>
+          <label for="email">Email</label>
+          <input id="email" type="email" required autocomplete="username" />
+        </div>
+        <div>
+          <label for="password">Contraseña</label>
+          <input id="password" type="password" required autocomplete="current-password" />
+        </div>
+        <button type="submit">Entrar</button>
+        <p id="error" class="error-msg" hidden></p>
+      </form>
+      <p class="muted"><a href="#" id="show-forgot-password">¿Olvidaste tu contraseña?</a></p>
+      <p class="muted" style="margin-top:14px;font-size:12px">El acceso es solo por invitación. Si no tienes cuenta todavía, pide a tu administrador/a que te dé de alta.</p>
+    </div>
+
+    <div class="card" id="forgot-password-card" hidden>
+      <h1>Recuperar contraseña</h1>
+      <p class="muted" style="margin-top:6px">Escribe tu email y te enviaremos un enlace para elegir una contraseña nueva.</p>
+      <form id="forgot-password-form" class="stack" style="margin-top:16px">
+        <div>
+          <label for="forgot-email">Email</label>
+          <input id="forgot-email" type="email" required autocomplete="username" />
+        </div>
+        <button type="submit">Enviar enlace</button>
+        <p id="forgot-password-message" class="muted" hidden></p>
+        <p id="forgot-password-error" class="error-msg" hidden></p>
+      </form>
+      <p class="muted" style="margin-top:14px"><a href="#" id="show-login-from-forgot">&larr; Volver a iniciar sesión</a></p>
+    </div>
+
+    <p class="muted" style="margin-top:20px;font-size:12px">Aviso: tu trabajo queda asociado a tu cuenta y es accesible para los docentes que se vinculen a tu código. No incluyas datos identificativos de pacientes.</p>
+    <p class="muted" style="margin-top:6px;font-size:12px"><a href="privacidad.html">Política de privacidad</a></p>
+  </main>
+  <script type="module" src="js/page-login.js"></script>
+</body>
+</html>

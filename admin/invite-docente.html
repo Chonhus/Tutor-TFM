@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Invitar docente — Tutor de TFM</title>
+  <link rel="stylesheet" href="../css/styles.css" />
+</head>
+<body>
+  <header id="app-nav"></header>
+  <main class="page page-narrow">
+    <button class="back-link" onclick="window.location.href='index.html'">&larr; Admin</button>
+    <div class="header"><h1>Invitar a un docente</h1></div>
+    <div class="card">
+      <form id="invite-form" class="stack">
+        <div>
+          <label for="email">Email del docente</label>
+          <input id="email" type="email" required />
+        </div>
+        <div>
+          <label for="full_name">Nombre completo (opcional)</label>
+          <input id="full_name" type="text" />
+        </div>
+        <button type="submit" id="submit-btn">Enviar invitación</button>
+        <p id="error" class="error-msg" hidden></p>
+        <p id="success" class="success-msg" hidden></p>
+      </form>
+    </div>
+  </main>
+  <script type="module" src="../js/page-admin-invite-docente.js"></script>
+</body>
+</html>
