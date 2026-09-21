@@ -2,6 +2,7 @@ import { requireDocente } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
 import { fetchFases, fetchAlumnosVinculados, fetchFasesEstadoDeVarios, vincularAlumno } from "./api.js";
+import { tipoDe } from "./tipos-tfm.js";
 
 const auth = await requireDocente();
 if (auth) {
@@ -36,14 +37,17 @@ async function render() {
     <h2 class="f-display" style="font-size:18px;margin:24px 0 12px">Tus alumnos (${alumnos.length})</h2>
     ${alumnos.length === 0 ? `<p class="muted">Todavía no te has vinculado a ningún alumno.</p>` : `
       <div class="stack">
-        ${alumnos.map((a) => `
+        ${alumnos.map((a) => {
+          const tipo = tipoDe(a.alumnos?.tipo_tfm);
+          return `
           <a class="itinerario-link" href="alumno-detalle.html?id=${encodeURIComponent(a.id)}">
             <span class="f-display" style="font-size:15px">${escapeHtml(a.full_name || a.email)}</span>
             <span class="muted" style="display:block;margin-top:2px">
-              ${escapeHtml(a.alumnos?.codigo || "")} · ${progresoPorAlumno[a.id] || 0}/${totalFases} fases completadas
+              ${escapeHtml(a.alumnos?.codigo || "")} · ${progresoPorAlumno[a.id] || 0}/${totalFases} fases completadas${tipo ? ` · ${escapeHtml(tipo.nombre)}` : ""}
             </span>
           </a>
-        `).join("")}
+        `;
+        }).join("")}
       </div>
     `}
   `;

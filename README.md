@@ -74,6 +74,7 @@ apuntan a `http://localhost:5181` para las pruebas locales.
 6. **Desplegar las Edge Functions**:
    ```
    supabase functions deploy corregir
+   supabase functions deploy sugerir-tipo-tfm
    supabase functions deploy vincular-alumno
    supabase functions deploy invite-docente
    supabase functions deploy invite-alumno
@@ -105,10 +106,11 @@ apuntan a `http://localhost:5181` para las pruebas locales.
 - `index.html`, `itinerario.html`, `fase.html` — flujo del alumno.
 - `seguimiento.html`, `alumno-detalle.html` — flujo del docente (y el admin, para el detalle).
 - `admin/` — edición de contenidos, invitación de alumnos (individual o por Excel) y docentes, listado/borrado de alumnos (solo accesible con `role = 'admin'`).
-- `js/` — cliente de Supabase, auth, navegación compartida, acceso a datos (`api.js`) y exportación a Word (`exportar-word.js`).
-- `supabase/migrations/0001_init.sql`, `0002_quitar_tipo_tfm.sql` — esquema, funciones y políticas de Row Level Security.
+- `js/` — cliente de Supabase, auth, navegación compartida, acceso a datos (`api.js`), tipos de TFM (`tipos-tfm.js`) y exportación a Word (`exportar-word.js`).
+- `supabase/migrations/0001_init.sql`, `0002_quitar_tipo_tfm.sql`, `0003_privacidad_alumno.sql`, `0004_reintroducir_tipo_tfm.sql` — esquema, funciones y políticas de Row Level Security.
 - `supabase/seed.sql` — las 8 fases del itinerario con sus tareas, e instrucciones del tutor IA.
-- `supabase/functions/corregir` — llama a Claude para corregir la tarea del alumno contra el contexto de la fase y la tarea.
+- `supabase/functions/corregir` — llama a Claude para corregir la tarea del alumno contra el contexto de la fase, la tarea y (si aplica) los criterios específicos de su tipo de TFM.
+- `supabase/functions/sugerir-tipo-tfm` — a partir de una breve descripción del alumno, sugiere qué tipo de TFM encaja mejor (el alumno decide igualmente).
 - `supabase/functions/vincular-alumno` — un docente se vincula a un alumno por código.
 - `supabase/functions/invite-docente` — un admin invita a un docente por email.
 - `supabase/functions/invite-alumno` — un admin invita a un alumno por email (uno a uno o en bloque desde `admin/invitar-alumnos.html`); el alta ya no es pública.

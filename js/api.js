@@ -58,11 +58,31 @@ export async function fetchAudioUrl(audioPath) {
 export async function fetchMiAlumno(userId) {
   const { data, error } = await supabase
     .from("alumnos")
-    .select("id, codigo, privacidad_aceptada_at")
+    .select("id, codigo, privacidad_aceptada_at, tipo_tfm")
     .eq("id", userId)
     .single();
   if (error) throw error;
   return data;
+}
+
+// El alumno solo puede escribir esta columna de su propia fila (ver
+// migración 0004: GRANT UPDATE acotado a esta columna). tipoId puede ser
+// null para volver a la pantalla de elección (p.ej. al cambiar de tipo) sin
+// perder nada de lo ya escrito: los envíos no dependen del tipo.
+export async function actualizarTipoTfm(tipoId) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("No hay sesión activa.");
+  const { error } = await supabase
+    .from("alumnos")
+    .update({ tipo_tfm: tipoId })
+    .eq("id", session.user.id);
+  if (error) throw error;
+}
+
+// Llama a la Edge Function sugerir-tipo-tfm: a partir de una breve
+// descripción libre del alumno, devuelve { tipo_id, justificacion }.
+export async function sugerirTipoTfm(descripcion) {
+  return invocarFuncion("sugerir-tipo-tfm", { descripcion });
 }
 
 // El alumno solo puede escribir esta columna de su propia fila (ver
@@ -148,7 +168,7 @@ export async function solicitarDescarga(envioId) {
 export async function fetchAlumnosVinculados() {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, alumnos(codigo)")
+    .select("id, email, full_name, alumnos(codigo, tipo_tfm)")
     .eq("role", "alumno")
     .order("full_name");
   if (error) throw error;
@@ -169,7 +189,7 @@ export async function fetchFasesEstadoDeVarios(alumnoIds) {
 export async function fetchAlumnoDetalle(alumnoId) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, full_name, alumnos(codigo), fases_estado(fase_id, completada, fecha_completada)")
+    .select("id, email, full_name, alumnos(codigo, tipo_tfm), fases_estado(fase_id, completada, fecha_completada)")
     .eq("id", alumnoId)
     .single();
   if (error) throw error;

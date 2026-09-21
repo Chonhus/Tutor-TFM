@@ -5,6 +5,7 @@ import {
   fetchAlumnoDetalle, fetchFases, fetchEnviosDeAlumno, solicitarDescarga, logActivity,
 } from "./api.js";
 import { exportarItinerarioWord } from "./exportar-word.js";
+import { tipoDe } from "./tipos-tfm.js";
 
 const alumnoId = new URLSearchParams(window.location.search).get("id");
 
@@ -38,12 +39,14 @@ async function render(rolCaller) {
   const completadasIds = new Set((alumno.fases_estado || []).filter((f) => f.completada).map((f) => f.fase_id));
   const totalEnvios = envios.length;
 
+  const tipo = tipoDe(alumno.alumnos?.tipo_tfm);
+
   content.innerHTML = `
     <button class="back-link" id="volver">&larr; Volver</button>
     <div class="header row-between">
       <div>
         <h1>${escapeHtml(alumno.full_name || alumno.email)}</h1>
-        <p>${escapeHtml(alumno.alumnos?.codigo || "")}</p>
+        <p>${escapeHtml(alumno.alumnos?.codigo || "")}${tipo ? ` · Tipo de TFM: ${escapeHtml(tipo.nombre)}` : ""}</p>
       </div>
       <button class="btn-secundario btn-small" id="exportar">Exportar a Word</button>
     </div>

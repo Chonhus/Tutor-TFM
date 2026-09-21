@@ -32,34 +32,94 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-type Fase = { titulo: string };
+type Fase = { id: string; titulo: string };
 type Tarea = { titulo: string; tipo: string };
 
+// Tipos de TFM: no configurables desde administración (decisión explícita).
+// Solo se necesita aquí el criterio de corrección por fase de los 4 tipos
+// de calidad y seguridad, que son metodológicamente muy distintos de una
+// investigación empírica (no piden PICO ni hipótesis, cambian resultados/
+// discusión/conclusiones por apartados propios). Los 3 tipos originales
+// (investigacion, proyecto, revision) no tienen criterios específicos: sus
+// variantes ya quedan cubiertas por el criterio general de cada tarea. Debe
+// mantenerse en sync con `js/tipos-tfm.js` (mismos id, mismo contenido).
+const CRITERIOS_POR_TIPO: Record<string, { nombre: string; porFase: Record<string, string> }> = {
+  "protocolo-investigacion": {
+    nombre: "Protocolo de investigación",
+    porFase: {
+      pregunta: "Aplica PICO/PECO. Comprueba que la pregunta sea contestable con un diseño factible. Si el alumno plantea en realidad un protocolo asistencial (estandarizar una actuación clínica), señálaselo.",
+      introduccion: "Comprueba que la introducción desemboque en una laguna de conocimiento concreta y referenciada que el estudio propuesto abordaría.",
+      objetivos: "Los objetivos deben ser los del estudio propuesto, no los del TFM: si aparece «diseñar/elaborar un protocolo» como objetivo, corrígelo. Si el diseño es analítico o experimental, exige hipótesis.",
+      metodologia: "Exige cálculo del tamaño muestral con parámetros explícitos, definición operativa de variables, plan de análisis ligado a cada objetivo, aspectos éticos concretos, cronograma y recursos. Señala lo que falte según la guía de su diseño (SPIRIT, STROBE).",
+      resultados: "Avisa con firmeza si el alumno presenta datos como si fueran reales. Comprueba que las tablas ficticias correspondan a los objetivos y variables definidos.",
+      discusion: "Exige análisis referenciado de sesgos previstos (selección, información, confusión) con estrategias para minimizarlos, y valoración de la aplicabilidad. No aceptes interpretaciones de resultados inexistentes.",
+      conclusiones: "Avisa si formula conclusiones como si el estudio se hubiera realizado.",
+    },
+  },
+  riesgos: {
+    nombre: "Mapa de riesgos",
+    porFase: {
+      pregunta: "No exijas formato PICO. Comprueba que el proceso esté delimitado (inicio, fin, ámbito), que la pregunta combine identificación y priorización de riesgos y que el alcance sea abarcable en un TFM.",
+      introduccion: "Comprueba que la justificación incluya datos referenciados de eventos adversos en ese proceso, el marco de gestión de riesgos y antecedentes de análisis similares.",
+      objetivos: "Comprueba que los objetivos específicos cubran descripción del proceso, identificación, análisis y priorización, y propuesta de medidas. No pidas hipótesis de contraste estadístico.",
+      metodologia: "Exige equipo multidisciplinar justificado, diagrama de flujo, técnica de identificación, herramienta de análisis con escalas definidas y umbral de priorización explícito. Señala lo que falte.",
+      resultados: "Comprueba la coherencia entre puntuaciones y priorización, que cada riesgo prioritario tenga medida, responsable e indicador, y que tablas y figuras estén descritas.",
+      discusion: "Exige comparación referenciada con otros análisis de riesgos y discusión de la subjetividad de las puntuaciones y del riesgo residual.",
+      conclusiones: "Las conclusiones deben nombrar los riesgos prioritarios concretos y las medidas clave, una por objetivo.",
+    },
+  },
+  protocolo: {
+    nombre: "Protocolo asistencial",
+    porFase: {
+      pregunta: "No exijas formato PICO. Comprueba que estén definidos situación clínica, población, ámbito, profesionales usuarios y problema que se quiere resolver. Si el alumno plantea en realidad un protocolo de investigación, señálaselo.",
+      introduccion: "Comprueba referencias a guías de práctica clínica y evidencia actual, y la justificación de la adaptación local.",
+      objetivos: "Comprueba que los objetivos específicos cubran evidencia, recomendaciones, algoritmo e indicadores de evaluación.",
+      metodologia: "Exige estrategia de búsqueda reproducible, sistema de graduación de la evidencia, método de consenso o validación, y plan de implantación y actualización.",
+      resultados: "Comprueba que cada recomendación tenga nivel de evidencia y referencia, que exista algoritmo y que los indicadores sean medibles (fórmula y estándar).",
+      discusion: "Exige comparación referenciada con otras guías o protocolos y análisis de barreras de implantación.",
+    },
+  },
+  acr: {
+    nombre: "Análisis causa-raíz",
+    porFase: {
+      pregunta: "No exijas formato PICO. Comprueba que el evento esté delimitado, que la pregunta se oriente a causas del sistema y no a buscar culpables, y avisa si aparecen datos identificativos.",
+      introduccion: "Comprueba datos referenciados sobre el tipo de evento y la fundamentación del enfoque sistémico.",
+      objetivos: "Comprueba que los objetivos cubran cronología, fallos y factores contribuyentes, acciones y seguimiento. No pidas hipótesis.",
+      metodologia: "Exige marco de análisis explícito, fuentes de información, herramientas de análisis, clasificación de factores y garantías de confidencialidad.",
+      resultados: "Comprueba que cada acción se vincule a una causa raíz, tenga nivel de efectividad, responsable, plazo e indicador. Señala si predominan acciones débiles (formación, recordatorios).",
+      discusion: "Exige comparación referenciada y discusión de los sesgos propios del análisis retrospectivo.",
+    },
+  },
+};
+
 // Portado literal de contextoTarea() (tutor-tfm.jsx líneas 308-323): mismo
-// criterio de corrección por tipo de tarea, mismo texto en español. Ya no
-// recibe un tipo de TFM preseleccionado (se retiró: las 8 fases son las
-// mismas para cualquier tipo de estudio, y el alumno lo elegía mal con
-// frecuencia); las variantes por tipo de estudio quedan como orientación
-// dentro del propio texto, que la IA interpreta a partir de lo que el
-// alumno describe en su respuesta.
-function contextoTarea(fase: Fase, tarea: Tarea, numeroIntento: number) {
+// criterio de corrección por tipo de tarea, mismo texto en español. A eso se
+// añade, si el alumno tiene un tipo de TFM con criterios específicos para
+// esta fase (ver CRITERIOS_POR_TIPO arriba), un bloque que prevalece sobre
+// el criterio general si hay conflicto.
+function contextoTarea(fase: Fase, tarea: Tarea, numeroIntento: number, tipoTfm: string | null) {
   const base = `Fase del TFM: ${fase.titulo}. Tarea: ${tarea.titulo}. Intento nº ${numeroIntento} del alumno en esta tarea.`;
+  let contexto: string;
   if (tarea.tipo === "tema") {
-    return base + " El alumno describe su TEMA de TFM. Ayúdale a delimitarlo: señala si es demasiado amplio, vago o poco factible; valóralo con los criterios FINER; indica qué decisiones le faltan por tomar (población concreta, contexto, variable de interés) y hazle 2-3 preguntas que le ayuden a centrarlo. No le des el tema resuelto ni se lo elijas tú. IMPORTANTE: en esta fase basta con identificar población, contexto y variable de interés a nivel general; NO exijas todavía el instrumento de medida, el modelo teórico concreto (p.ej. un cuestionario o marco conceptual específico) ni el plan de análisis — eso corresponde a la fase de Metodología, más adelante.";
+    contexto = base + " El alumno describe su TEMA de TFM. Ayúdale a delimitarlo: señala si es demasiado amplio, vago o poco factible; valóralo con los criterios FINER; indica qué decisiones le faltan por tomar (población concreta, contexto, variable de interés) y hazle 2-3 preguntas que le ayuden a centrarlo. No le des el tema resuelto ni se lo elijas tú. IMPORTANTE: en esta fase basta con identificar población, contexto y variable de interés a nivel general; NO exijas todavía el instrumento de medida, el modelo teórico concreto (p.ej. un cuestionario o marco conceptual específico) ni el plan de análisis — eso corresponde a la fase de Metodología, más adelante.";
+  } else if (tarea.tipo === "pregunta") {
+    contexto = base + " El alumno formula su PREGUNTA DE INVESTIGACIÓN. Evalúa si es concreta, contestable con un TFM y coherente con su tipo de trabajo. En investigación o revisión, comprueba que estén bien identificados los componentes PICO a nivel general; en proyecto de intervención, que defina necesidad y población diana. Señala qué le falta o sobra a la pregunta y oriéntale para precisarla, sin formularla tú por completo. IMPORTANTE: no exijas todavía el instrumento de medida ni el modelo teórico concreto que usará — eso corresponde a la fase de Metodología, más adelante; aquí basta con que la pregunta sea clara y viable.";
+  } else if (tarea.tipo === "esquema") {
+    contexto = base + " El alumno propone una ESTRUCTURA/ESQUEMA. Evalúa si es adecuada para esta fase y este tipo de TFM: orden lógico, apartados que faltan o sobran. No le des la estructura resuelta; oriéntale para que la corrija él mismo.";
+  } else if (tarea.tipo === "objetivos") {
+    contexto = base + " Corrige el ENFOQUE de los objetivos (general vs. específicos, verbos en infinitivo, especificidad, medibilidad, coherencia) y mejora su redacción proponiendo una reformulación breve de cada uno como ejemplo.";
+  } else if (tarea.tipo === "referencias") {
+    contexto = base + " Revisa el FORMATO de las referencias según el estilo que indique el alumno, su pertinencia y actualidad aparente. No inventes ni completes referencias.";
+  } else {
+    contexto = base + " Revisa la REDACCIÓN: señala mejoras concretas de claridad, precisión científica y estructura por párrafos SIN reescribir el texto. Para cada párrafo con afirmaciones sin referencia, pide explícitamente que aporte la referencia bibliográfica correspondiente.";
   }
-  if (tarea.tipo === "pregunta") {
-    return base + " El alumno formula su PREGUNTA DE INVESTIGACIÓN. Evalúa si es concreta, contestable con un TFM y coherente con su tipo de trabajo. En investigación o revisión, comprueba que estén bien identificados los componentes PICO a nivel general; en proyecto de intervención, que defina necesidad y población diana. Señala qué le falta o sobra a la pregunta y oriéntale para precisarla, sin formularla tú por completo. IMPORTANTE: no exijas todavía el instrumento de medida ni el modelo teórico concreto que usará — eso corresponde a la fase de Metodología, más adelante; aquí basta con que la pregunta sea clara y viable.";
+
+  const criterios = tipoTfm ? CRITERIOS_POR_TIPO[tipoTfm] : undefined;
+  const especifico = criterios?.porFase[fase.id];
+  if (especifico) {
+    contexto += `\n\nCRITERIOS ESPECÍFICOS PARA EL TIPO «${criterios!.nombre}» (prevalecen sobre los generales si hay conflicto): ${especifico}`;
   }
-  if (tarea.tipo === "esquema") {
-    return base + " El alumno propone una ESTRUCTURA/ESQUEMA. Evalúa si es adecuada para esta fase y este tipo de TFM: orden lógico, apartados que faltan o sobran. No le des la estructura resuelta; oriéntale para que la corrija él mismo.";
-  }
-  if (tarea.tipo === "objetivos") {
-    return base + " Corrige el ENFOQUE de los objetivos (general vs. específicos, verbos en infinitivo, especificidad, medibilidad, coherencia) y mejora su redacción proponiendo una reformulación breve de cada uno como ejemplo.";
-  }
-  if (tarea.tipo === "referencias") {
-    return base + " Revisa el FORMATO de las referencias según el estilo que indique el alumno, su pertinencia y actualidad aparente. No inventes ni completes referencias.";
-  }
-  return base + " Revisa la REDACCIÓN: señala mejoras concretas de claridad, precisión científica y estructura por párrafos SIN reescribir el texto. Para cada párrafo con afirmaciones sin referencia, pide explícitamente que aporte la referencia bibliográfica correspondiente.";
+  return contexto;
 }
 
 async function pedirFeedback(instrucciones: string, contexto: string, textoAlumno: string) {
@@ -117,7 +177,7 @@ Deno.serve(async (req) => {
     // para no depender de qué RLS vea el propio caller.
     const { data: alumno, error: alumnoError } = await adminClient
       .from("alumnos")
-      .select("id")
+      .select("id, tipo_tfm")
       .eq("id", alumnoId)
       .single();
     if (alumnoError || !alumno) {
@@ -129,7 +189,7 @@ Deno.serve(async (req) => {
     // tutor IA falsificando esos campos.
     const { data: tarea, error: tareaError } = await adminClient
       .from("tareas_config")
-      .select("id, titulo, tipo, fase_id, fases_config(titulo, orden)")
+      .select("id, titulo, tipo, fase_id, fases_config(id, titulo, orden)")
       .eq("id", tarea_id)
       .single();
     if (tareaError || !tarea) return jsonResponse({ error: "Tarea no encontrada" }, 404);
@@ -150,7 +210,7 @@ Deno.serve(async (req) => {
       .eq("alumno_id", alumnoId)
       .eq("tarea_id", tarea_id);
 
-    const fase = tarea.fases_config as unknown as { titulo: string; orden: number };
+    const fase = tarea.fases_config as unknown as { id: string; titulo: string; orden: number };
 
     // Contexto de fases anteriores: para que la IA pueda valorar coherencia
     // (p.ej. que Resultados responda a los Objetivos) sin tener que reenviar
@@ -200,7 +260,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const contexto = contextoPrevio + contextoTarea(fase, tarea, (intentosPrevios ?? 0) + 1);
+    const contexto = contextoPrevio + contextoTarea(fase, tarea, (intentosPrevios ?? 0) + 1, alumno.tipo_tfm);
 
     let feedback: string;
     try {

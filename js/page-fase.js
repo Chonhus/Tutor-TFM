@@ -3,9 +3,10 @@ import { requireAlumno } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
 import {
-  fetchFase, fetchAudioUrl, fetchEnviosDeAlumno, fetchFasesEstado,
+  fetchFase, fetchAudioUrl, fetchEnviosDeAlumno, fetchFasesEstado, fetchMiAlumno,
   enviarTarea, subirDocxOriginal, marcarFaseCompletada,
 } from "./api.js";
+import { tipoDe, adaptacionDe, instruccionDe } from "./tipos-tfm.js";
 
 const faseId = new URLSearchParams(window.location.search).get("fase");
 const pendientesDocx = new Map(); // tarea_id -> { path, nombre }
@@ -26,14 +27,17 @@ function formatFecha(iso) {
 
 async function render(userId) {
   const content = document.getElementById("content");
-  const [fase, envios, fasesEstado] = await Promise.all([
+  const [fase, envios, fasesEstado, alumno] = await Promise.all([
     fetchFase(faseId),
     fetchEnviosDeAlumno(userId),
     fetchFasesEstado(userId),
+    fetchMiAlumno(userId),
   ]);
 
   const completada = !!fasesEstado.find((fe) => fe.fase_id === faseId)?.completada;
   const audioUrl = fase.audio_path ? await fetchAudioUrl(fase.audio_path).catch(() => null) : null;
+  const tipo = tipoDe(alumno.tipo_tfm);
+  const adaptacion = adaptacionDe(alumno.tipo_tfm, faseId);
 
   content.innerHTML = `
     <button class="back-link" id="volver">&larr; Volver a tu itinerario</button>
@@ -48,6 +52,12 @@ async function render(userId) {
           <audio controls src="${audioUrl}" style="width:100%;max-width:420px"></audio>
         </div>` : ""}
     </div>
+
+    ${adaptacion?.explicacion ? `
+      <div class="card card-amber">
+        <div class="eyebrow" style="color:var(--ambar)">En tu TFM · ${escapeHtml(tipo?.nombre || "")}</div>
+        <p style="white-space:pre-line;line-height:1.6">${escapeHtml(adaptacion.explicacion)}</p>
+      </div>` : ""}
 
     <div id="tareas"></div>
 
@@ -79,11 +89,12 @@ async function render(userId) {
     const intentos = envios
       .filter((e) => e.tareas_config?.id === tarea.id)
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    tareasEl.appendChild(renderTarea(tarea, idx, intentos, userId));
+    const instruccion = instruccionDe(alumno.tipo_tfm, faseId, tarea.slug, tarea.instruccion);
+    tareasEl.appendChild(renderTarea(tarea, instruccion, idx, intentos, userId));
   });
 }
 
-function renderTarea(tarea, idx, intentos, userId) {
+function renderTarea(tarea, instruccion, idx, intentos, userId) {
   const wrap = document.createElement("div");
   wrap.className = "card";
   wrap.style.marginTop = "16px";
@@ -93,7 +104,7 @@ function renderTarea(tarea, idx, intentos, userId) {
   wrap.innerHTML = `
     <div class="paso-label">Paso ${idx + 1}</div>
     <h3 class="f-display" style="font-size:17px;margin-bottom:4px">${escapeHtml(tarea.titulo)}</h3>
-    <p class="muted" style="margin-bottom:12px">${escapeHtml(tarea.instruccion)}</p>
+    <p class="muted" style="margin-bottom:12px">${escapeHtml(instruccion)}</p>
     <textarea id="texto-${tarea.id}" rows="8" placeholder="Escribe aquí tu texto…">${escapeHtml(ultimo?.texto || "")}</textarea>
     ${tarea.permite_archivo ? `
       <div class="file-drop">
