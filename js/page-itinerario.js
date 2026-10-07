@@ -4,7 +4,7 @@ import { escapeHtml } from "./escape.js";
 import {
   fetchMiAlumno, fetchFases, fetchFasesEstado, fetchEnviosDeAlumno, aceptarPrivacidad, actualizarTipoTfm,
 } from "./api.js";
-import { TIPOS_TFM } from "./tipos-tfm.js";
+import { TIPOS_TFM, itinerarioDeTipo } from "./tipos-tfm.js";
 import { exportarItinerarioWord } from "./exportar-word.js";
 
 const auth = await requireAlumno();
@@ -55,8 +55,9 @@ async function render(userId) {
     return;
   }
 
+  const itinerario = itinerarioDeTipo(alumno.tipo_tfm);
   const [fases, fasesEstado, envios] = await Promise.all([
-    fetchFases(),
+    fetchFases(itinerario),
     fetchFasesEstado(userId),
     fetchEnviosDeAlumno(userId),
   ]);
@@ -86,7 +87,7 @@ async function render(userId) {
     <p id="export-error" class="error-msg" hidden></p>
     <div class="card" style="margin-bottom:16px">
       <label for="tipo-tfm">Tipo de TFM</label>
-      <select id="tipo-tfm" style="max-width:320px">
+      <select id="tipo-tfm" style="max-width:380px">
         <option value="">Sin indicar</option>
         ${TIPOS_TFM.map((t) => `<option value="${t.id}" ${alumno.tipo_tfm === t.id ? "selected" : ""}>${escapeHtml(t.nombre)}</option>`).join("")}
       </select>
@@ -118,11 +119,26 @@ async function render(userId) {
   selectTipo.addEventListener("change", async () => {
     const errorEl = document.getElementById("tipo-tfm-error");
     errorEl.hidden = true;
+    // Pasar a (o salir de) la memoria de gestión cambia las fases del
+    // itinerario. Lo ya escrito no se borra (los envíos siguen ligados a
+    // sus tareas) y reaparece si se vuelve al tipo anterior.
+    const cambiaItinerario = itinerarioDeTipo(selectTipo.value) !== itinerario;
+    if (cambiaItinerario && !window.confirm(
+      "Este cambio sustituye las fases de tu itinerario por las de otro tipo de trabajo. "
+      + "Lo que ya hayas escrito no se borra y volverá a aparecer si vuelves a elegir el tipo anterior. ¿Continuar?",
+    )) {
+      selectTipo.value = tipoGuardado;
+      return;
+    }
     pintarDescripcion();
     selectTipo.disabled = true;
     try {
       await actualizarTipoTfm(selectTipo.value);
       tipoGuardado = selectTipo.value;
+      if (cambiaItinerario) {
+        await render(userId);
+        return;
+      }
     } catch (err) {
       selectTipo.value = tipoGuardado;
       pintarDescripcion();

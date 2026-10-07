@@ -25,10 +25,16 @@ async function invocarFuncion(nombre, body) {
 
 // ---- Itinerario (fases y tareas) ----
 
-export async function fetchFases() {
-  const { data, error } = await supabase
+// Con itinerario ("academico" | "gestion", ver migración 0005) devuelve
+// solo las fases de ese itinerario; sin él, todas (panel de admin),
+// agrupadas por itinerario.
+export async function fetchFases(itinerario) {
+  let query = supabase
     .from("fases_config")
-    .select("id, orden, titulo, explicacion, audio_path, tareas_config(id, slug, orden, titulo, instruccion, tipo, permite_archivo)")
+    .select("id, itinerario, orden, titulo, explicacion, audio_path, tareas_config(id, slug, orden, titulo, instruccion, tipo, permite_archivo)");
+  if (itinerario) query = query.eq("itinerario", itinerario);
+  const { data, error } = await query
+    .order("itinerario")
     .order("orden")
     .order("orden", { foreignTable: "tareas_config" });
   if (error) throw error;
