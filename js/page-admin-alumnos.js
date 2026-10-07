@@ -1,6 +1,7 @@
 import { requireAdmin } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
+import { nombreTipoTfm } from "./tipos-tfm.js";
 import { fetchAlumnosVinculados, borrarAlumno } from "./api.js";
 
 const auth = await requireAdmin();
@@ -22,13 +23,14 @@ async function render() {
     <p id="error" class="error-msg" hidden></p>
     ${alumnos.length === 0 ? `<p class="muted">Todavía no hay alumnos registrados.</p>` : `
       <table>
-        <thead><tr><th>Nombre</th><th>Email</th><th>Código</th><th></th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Email</th><th>Código</th><th>Tipo de TFM</th><th></th></tr></thead>
         <tbody>
           ${alumnos.map((a) => `
             <tr>
               <td><a href="../alumno-detalle.html?id=${encodeURIComponent(a.id)}">${escapeHtml(a.full_name || "(sin nombre)")}</a></td>
               <td>${escapeHtml(a.email)}</td>
               <td>${escapeHtml(a.alumnos?.codigo || "")}</td>
+              <td>${escapeHtml(nombreTipoTfm(a.alumnos?.tipo_tfm) || "—")}</td>
               <td><button class="btn-danger btn-small" data-id="${a.id}" data-nombre="${escapeHtml(a.full_name || a.email)}">Borrar</button></td>
             </tr>
           `).join("")}

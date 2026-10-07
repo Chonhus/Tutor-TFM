@@ -1,6 +1,7 @@
 import { requireDocente } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
+import { nombreTipoTfm } from "./tipos-tfm.js";
 import { fetchFases, fetchAlumnosVinculados, fetchFasesEstadoDeVarios, vincularAlumno } from "./api.js";
 
 const auth = await requireDocente();
@@ -40,7 +41,7 @@ async function render() {
           <a class="itinerario-link" href="alumno-detalle.html?id=${encodeURIComponent(a.id)}">
             <span class="f-display" style="font-size:15px">${escapeHtml(a.full_name || a.email)}</span>
             <span class="muted" style="display:block;margin-top:2px">
-              ${escapeHtml(a.alumnos?.codigo || "")} · ${progresoPorAlumno[a.id] || 0}/${totalFases} fases completadas
+              ${escapeHtml(a.alumnos?.codigo || "")} · ${escapeHtml(nombreTipoTfm(a.alumnos?.tipo_tfm) || "Tipo sin indicar")} · ${progresoPorAlumno[a.id] || 0}/${totalFases} fases completadas
             </span>
           </a>
         `).join("")}
