@@ -32,22 +32,28 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-type Fase = { titulo: string };
+type Fase = { titulo: string; itinerario: string };
 type Tarea = { titulo: string; tipo: string };
 
 // Orientación según el tipo de TFM que el alumno haya indicado (opcional,
 // ver migración 0004). Sin tipo indicado no se añade nada y la IA lo deduce
-// del texto, como antes. "gestion" es el que más se aparta de la rúbrica
-// por defecto (pensada para estudios empíricos), por eso es el más detallado.
+// del texto, como antes.
 const ORIENTACION_TIPO_TFM: Record<string, string> = {
   investigacion: "TIPO DE TFM indicado por el alumno: INVESTIGACIÓN (recoge y analiza datos propios). Aplica los criterios de un estudio empírico (pregunta PICO, diseño, muestra, variables, análisis, ética).",
   proyecto: "TIPO DE TFM indicado por el alumno: PROYECTO DE INTERVENCIÓN. Valora la necesidad detectada y la población diana; en Metodología, actividades, cronograma, recursos y plan de evaluación; en Resultados, el desarrollo de la intervención o los resultados esperados. No exijas tamaño muestral ni análisis estadístico de datos que aún no existen.",
   revision: "TIPO DE TFM indicado por el alumno: REVISIÓN BIBLIOGRÁFICA. Valora la pregunta PICO, la estrategia de búsqueda reproducible, los criterios de selección, la evaluación de la calidad de los estudios (PRISMA) y la síntesis de la evidencia.",
-  gestion: "TIPO DE TFM indicado por el alumno: PROYECTO DE GESTIÓN (análisis de un servicio, unidad o área y plan de mejora). Su contenido es: análisis de situación del área (qué es, dónde encaja, servicios, recursos, usuarios), estructura y procesos (mapa de procesos, circuitos, responsables), análisis DAFO y líneas de mejora derivadas del DAFO, cada una con responsable, plazo e indicador de seguimiento. La memoria mantiene el formato académico: en Pregunta, valora la necesidad o el problema de gestión y el área concreta, no exijas PICO; en Metodología, valora las fuentes y técnicas (análisis documental, datos de actividad, entrevistas o reuniones con responsables, elaboración del mapa de procesos y del DAFO) y NO exijas tamaño muestral, análisis estadístico ni comité de ética salvo que de verdad proceda; en Resultados, acepta el análisis de situación, los procesos, el DAFO y las líneas de mejora (no es «interpretación» indebida: son el resultado del trabajo). Para los datos propios del área acepta como fuente documentación interna, registros y entrevistas, siempre que quede claro de dónde sale cada afirmación; exige bibliografía para el marco teórico y para comparar con otras experiencias. Insiste en acotar: mejor pocos procesos nucleares bien analizados que todos superficialmente. Recuerda que solo lees texto: si menciona un diagrama o mapa de procesos, valora su descripción escrita.",
 };
 
+// La memoria de gestión tiene su propio itinerario de fases (migración
+// 0005), así que esta orientación se aplica por el itinerario de la fase,
+// no por el tipo guardado del alumno: una tarea de ese itinerario siempre
+// se corrige como memoria de gestión.
+const ORIENTACION_GESTION = "TIPO DE TFM: MEMORIA DE GESTIÓN para optar a la jefatura de un servicio, sección o unidad (p. ej. Máster en Dirección y Gestión Sanitaria). NO es un trabajo de investigación: no exijas pregunta PICO, hipótesis, muestra, análisis estadístico ni comité de ética, ni la estructura introducción-metodología-resultados-discusión. La memoria sigue una plantilla obligatoria (50-100 páginas): introducción y propósito; marco general del sistema sanitario; análisis estratégico (externo, interno, DAFO/CAME); plan de actuación (misión, visión y valores, líneas estratégicas, objetivos asistenciales, financieros y de sostenibilidad, mapa de procesos, calidad y seguridad, atención centrada en el paciente, relación con otros servicios, guías y rutas asistenciales, gestión del conocimiento, docencia, investigación); cuadro de mando con indicadores; currículum del candidato; bibliografía. Criterios de la rúbrica que debes vigilar: información del contexto actualizada, completa y con su fuente; un plan estratégico que se derive del análisis (DAFO → CAME → líneas → objetivos → indicadores) y sea factible; todos los apartados desarrollados de forma equilibrada, sin priorizar uno sobre otros; y un nivel formal propio de una memoria real de candidatura. Para los datos del servicio acepta como fuente memorias, registros, cuadros de mando e informes internos, siempre que se identifiquen; exige bibliografía para la normativa, los datos oficiales y el marco conceptual de gestión. Recuerda que solo lees texto: si menciona un diagrama, organigrama o mapa de procesos, valora su descripción escrita.";
+
 function contextoTarea(fase: Fase, tarea: Tarea, numeroIntento: number, tipoTfm: string | null) {
-  const orientacion = tipoTfm ? ORIENTACION_TIPO_TFM[tipoTfm] : undefined;
+  const orientacion = fase.itinerario === "gestion"
+    ? ORIENTACION_GESTION
+    : tipoTfm ? ORIENTACION_TIPO_TFM[tipoTfm] : undefined;
   const base = contextoTareaPorTipoDeTarea(fase, tarea, numeroIntento);
   return orientacion ? `${orientacion}\n\n${base}` : base;
 }
@@ -74,7 +80,7 @@ function contextoTareaPorTipoDeTarea(fase: Fase, tarea: Tarea, numeroIntento: nu
   if (tarea.tipo === "referencias") {
     return base + " Revisa el FORMATO de las referencias según el estilo que indique el alumno, su pertinencia y actualidad aparente. No inventes ni completes referencias.";
   }
-  return base + " Revisa la REDACCIÓN: señala mejoras concretas de claridad, precisión científica y estructura por párrafos SIN reescribir el texto. Para cada párrafo con afirmaciones sin referencia, pide explícitamente que aporte la referencia bibliográfica correspondiente.";
+  return base + " Revisa la REDACCIÓN: señala mejoras concretas de claridad, precisión científica y estructura por párrafos SIN reescribir el texto. Para cada párrafo con afirmaciones sin fuente, pide explícitamente que la aporte (referencia bibliográfica o, para datos propios de un servicio o centro, el documento o registro del que salen).";
 }
 
 async function pedirFeedback(instrucciones: string, contexto: string, textoAlumno: string) {
@@ -144,7 +150,7 @@ Deno.serve(async (req) => {
     // tutor IA falsificando esos campos.
     const { data: tarea, error: tareaError } = await adminClient
       .from("tareas_config")
-      .select("id, titulo, tipo, fase_id, fases_config(titulo, orden)")
+      .select("id, titulo, tipo, fase_id, fases_config(titulo, orden, itinerario)")
       .eq("id", tarea_id)
       .single();
     if (tareaError || !tarea) return jsonResponse({ error: "Tarea no encontrada" }, 404);
@@ -165,7 +171,7 @@ Deno.serve(async (req) => {
       .eq("alumno_id", alumnoId)
       .eq("tarea_id", tarea_id);
 
-    const fase = tarea.fases_config as unknown as { titulo: string; orden: number };
+    const fase = tarea.fases_config as unknown as { titulo: string; orden: number; itinerario: string };
 
     // Contexto de fases anteriores: para que la IA pueda valorar coherencia
     // (p.ej. que Resultados responda a los Objetivos) sin tener que reenviar
@@ -179,6 +185,7 @@ Deno.serve(async (req) => {
     const { data: fasesAnteriores } = await adminClient
       .from("fases_config")
       .select("id, orden, titulo, tareas_config(id, titulo, orden)")
+      .eq("itinerario", fase.itinerario)
       .lt("orden", fase.orden)
       .order("orden")
       .order("orden", { foreignTable: "tareas_config" });

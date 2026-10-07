@@ -37,7 +37,7 @@ apuntan a `http://localhost:5181` para las pruebas locales.
 
 | Rol | Alta | Puede |
 |---|---|---|
-| Alumno | Sin alta pública: lo invita un admin (`admin/invitar-alumnos.html`), uno a uno o en bloque desde un Excel; recibe un código único `TFM-XXXXXX` | Indicar (opcionalmente) su tipo de TFM —investigación, proyecto de intervención, revisión o proyecto de gestión— para que la IA adapte la corrección; recorrer las 8 fases, enviar tareas a corrección, subir `.docx`, marcar fases completadas, exportar a Word |
+| Alumno | Sin alta pública: lo invita un admin (`admin/invitar-alumnos.html`), uno a uno o en bloque desde un Excel; recibe un código único `TFM-XXXXXX` | Indicar (opcionalmente) su tipo de TFM —investigación, proyecto de intervención, revisión o memoria de gestión (candidatura a jefatura)— para que la IA adapte la corrección; recorrer las fases de su itinerario (8 fases académicas, o 9 apartados de la memoria de gestión), enviar tareas a corrección, subir `.docx`, marcar fases completadas, exportar a Word |
 | Docente | Lo invita un admin (`admin/invite-docente.html`) | Vincularse a un alumno con su código y ver en solo lectura todo su historial |
 | Administrador | El primero se promociona por SQL (ver más abajo); a partir de ahí puede invitar más admins directamente en Supabase | Editar textos/instrucciones/audios del itinerario, invitar docentes y alumnos, listar y borrar alumnos |
 
@@ -106,7 +106,7 @@ apuntan a `http://localhost:5181` para las pruebas locales.
 - `seguimiento.html`, `alumno-detalle.html` — flujo del docente (y el admin, para el detalle).
 - `admin/` — edición de contenidos, invitación de alumnos (individual o por Excel) y docentes, listado/borrado de alumnos (solo accesible con `role = 'admin'`).
 - `js/` — cliente de Supabase, auth, navegación compartida, acceso a datos (`api.js`) y exportación a Word (`exportar-word.js`).
-- `supabase/migrations/0001_init.sql` … `0004_tipo_tfm_opcional.sql` — esquema, funciones y políticas de Row Level Security.
+- `supabase/migrations/0001_init.sql` … `0005_itinerario_gestion.sql` — esquema, funciones y políticas de Row Level Security.
 - `supabase/seed.sql` — las 8 fases del itinerario con sus tareas, e instrucciones del tutor IA.
 - `supabase/functions/corregir` — llama a Claude para corregir la tarea del alumno contra el contexto de la fase y la tarea.
 - `supabase/functions/vincular-alumno` — un docente se vincula a un alumno por código.

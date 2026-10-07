@@ -47,7 +47,23 @@ async function render() {
   `;
 
   const fasesEl = document.getElementById("fases");
+  // Las fases llegan agrupadas por itinerario (ver fetchFases): un
+  // encabezado al empezar cada grupo. Es un <h2>, no un <div>, para que no
+  // lo recoja el guardado (que recorre "#fases > div").
+  const nombresItinerario = {
+    academico: "Itinerario académico (investigación, proyecto de intervención, revisión)",
+    gestion: "Itinerario de memoria de gestión (candidatura a jefatura)",
+  };
+  let itinerarioActual = null;
   fases.forEach((fase) => {
+    if (fase.itinerario !== itinerarioActual) {
+      itinerarioActual = fase.itinerario;
+      const h = document.createElement("h2");
+      h.className = "f-display";
+      h.style.cssText = "font-size:18px;margin:28px 0 4px";
+      h.textContent = nombresItinerario[fase.itinerario] ?? fase.itinerario;
+      fasesEl.appendChild(h);
+    }
     const card = document.createElement("div");
     card.className = "card";
     card.style.marginTop = "16px";

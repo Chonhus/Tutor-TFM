@@ -1,7 +1,7 @@
 import { requireAnyRole } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
-import { nombreTipoTfm } from "./tipos-tfm.js";
+import { nombreTipoTfm, itinerarioDeTipo } from "./tipos-tfm.js";
 import {
   fetchAlumnoDetalle, fetchFases, fetchEnviosDeAlumno, solicitarDescarga, logActivity,
 } from "./api.js";
@@ -35,7 +35,10 @@ async function render(rolCaller) {
     return;
   }
 
-  const [fases, envios] = await Promise.all([fetchFases(), fetchEnviosDeAlumno(alumnoId)]);
+  const [fases, envios] = await Promise.all([
+    fetchFases(itinerarioDeTipo(alumno.alumnos?.tipo_tfm)),
+    fetchEnviosDeAlumno(alumnoId),
+  ]);
   const completadasIds = new Set((alumno.fases_estado || []).filter((f) => f.completada).map((f) => f.fase_id));
   const totalEnvios = envios.length;
 

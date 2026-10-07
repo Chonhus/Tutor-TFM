@@ -1,7 +1,7 @@
 import { requireDocente } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
-import { nombreTipoTfm } from "./tipos-tfm.js";
+import { nombreTipoTfm, itinerarioDeTipo } from "./tipos-tfm.js";
 import { fetchFases, fetchAlumnosVinculados, fetchFasesEstadoDeVarios, vincularAlumno } from "./api.js";
 
 const auth = await requireDocente();
@@ -13,12 +13,22 @@ if (auth) {
 async function render() {
   const content = document.getElementById("content");
   const [fases, alumnos] = await Promise.all([fetchFases(), fetchAlumnosVinculados()]);
-  const totalFases = fases.length;
   const completadas = await fetchFasesEstadoDeVarios(alumnos.map((a) => a.id));
+
+  // Cada alumno sigue el itinerario de su tipo de TFM (ver tipos-tfm.js):
+  // el total y las completadas se cuentan solo sobre las fases de ese
+  // itinerario.
+  const itinerarioDeFase = Object.fromEntries(fases.map((f) => [f.id, f.itinerario]));
+  const totalPorItinerario = {};
+  fases.forEach((f) => { totalPorItinerario[f.itinerario] = (totalPorItinerario[f.itinerario] || 0) + 1; });
+  const itinerarioDeAlumno = Object.fromEntries(alumnos.map((a) => [a.id, itinerarioDeTipo(a.alumnos?.tipo_tfm)]));
 
   const progresoPorAlumno = {};
   alumnos.forEach((a) => { progresoPorAlumno[a.id] = 0; });
-  completadas.forEach((c) => { progresoPorAlumno[c.alumno_id] = (progresoPorAlumno[c.alumno_id] || 0) + 1; });
+  completadas.forEach((c) => {
+    if (itinerarioDeFase[c.fase_id] !== itinerarioDeAlumno[c.alumno_id]) return;
+    progresoPorAlumno[c.alumno_id] = (progresoPorAlumno[c.alumno_id] || 0) + 1;
+  });
 
   content.innerHTML = `
     <div class="header">
@@ -41,7 +51,7 @@ async function render() {
           <a class="itinerario-link" href="alumno-detalle.html?id=${encodeURIComponent(a.id)}">
             <span class="f-display" style="font-size:15px">${escapeHtml(a.full_name || a.email)}</span>
             <span class="muted" style="display:block;margin-top:2px">
-              ${escapeHtml(a.alumnos?.codigo || "")} · ${escapeHtml(nombreTipoTfm(a.alumnos?.tipo_tfm) || "Tipo sin indicar")} · ${progresoPorAlumno[a.id] || 0}/${totalFases} fases completadas
+              ${escapeHtml(a.alumnos?.codigo || "")} · ${escapeHtml(nombreTipoTfm(a.alumnos?.tipo_tfm) || "Tipo sin indicar")} · ${progresoPorAlumno[a.id] || 0}/${totalPorItinerario[itinerarioDeAlumno[a.id]] || 0} fases completadas
             </span>
           </a>
         `).join("")}
