@@ -35,14 +35,29 @@ function jsonResponse(body: unknown, status = 200) {
 type Fase = { titulo: string };
 type Tarea = { titulo: string; tipo: string };
 
+// Orientación según el tipo de TFM que el alumno haya indicado (opcional,
+// ver migración 0004). Sin tipo indicado no se añade nada y la IA lo deduce
+// del texto, como antes. "gestion" es el que más se aparta de la rúbrica
+// por defecto (pensada para estudios empíricos), por eso es el más detallado.
+const ORIENTACION_TIPO_TFM: Record<string, string> = {
+  investigacion: "TIPO DE TFM indicado por el alumno: INVESTIGACIÓN (recoge y analiza datos propios). Aplica los criterios de un estudio empírico (pregunta PICO, diseño, muestra, variables, análisis, ética).",
+  proyecto: "TIPO DE TFM indicado por el alumno: PROYECTO DE INTERVENCIÓN. Valora la necesidad detectada y la población diana; en Metodología, actividades, cronograma, recursos y plan de evaluación; en Resultados, el desarrollo de la intervención o los resultados esperados. No exijas tamaño muestral ni análisis estadístico de datos que aún no existen.",
+  revision: "TIPO DE TFM indicado por el alumno: REVISIÓN BIBLIOGRÁFICA. Valora la pregunta PICO, la estrategia de búsqueda reproducible, los criterios de selección, la evaluación de la calidad de los estudios (PRISMA) y la síntesis de la evidencia.",
+  gestion: "TIPO DE TFM indicado por el alumno: PROYECTO DE GESTIÓN (análisis de un servicio, unidad o área y plan de mejora). Su contenido es: análisis de situación del área (qué es, dónde encaja, servicios, recursos, usuarios), estructura y procesos (mapa de procesos, circuitos, responsables), análisis DAFO y líneas de mejora derivadas del DAFO, cada una con responsable, plazo e indicador de seguimiento. La memoria mantiene el formato académico: en Pregunta, valora la necesidad o el problema de gestión y el área concreta, no exijas PICO; en Metodología, valora las fuentes y técnicas (análisis documental, datos de actividad, entrevistas o reuniones con responsables, elaboración del mapa de procesos y del DAFO) y NO exijas tamaño muestral, análisis estadístico ni comité de ética salvo que de verdad proceda; en Resultados, acepta el análisis de situación, los procesos, el DAFO y las líneas de mejora (no es «interpretación» indebida: son el resultado del trabajo). Para los datos propios del área acepta como fuente documentación interna, registros y entrevistas, siempre que quede claro de dónde sale cada afirmación; exige bibliografía para el marco teórico y para comparar con otras experiencias. Insiste en acotar: mejor pocos procesos nucleares bien analizados que todos superficialmente. Recuerda que solo lees texto: si menciona un diagrama o mapa de procesos, valora su descripción escrita.",
+};
+
+function contextoTarea(fase: Fase, tarea: Tarea, numeroIntento: number, tipoTfm: string | null) {
+  const orientacion = tipoTfm ? ORIENTACION_TIPO_TFM[tipoTfm] : undefined;
+  const base = contextoTareaPorTipoDeTarea(fase, tarea, numeroIntento);
+  return orientacion ? `${orientacion}\n\n${base}` : base;
+}
+
 // Portado literal de contextoTarea() (tutor-tfm.jsx líneas 308-323): mismo
-// criterio de corrección por tipo de tarea, mismo texto en español. Ya no
-// recibe un tipo de TFM preseleccionado (se retiró: las 8 fases son las
-// mismas para cualquier tipo de estudio, y el alumno lo elegía mal con
-// frecuencia); las variantes por tipo de estudio quedan como orientación
-// dentro del propio texto, que la IA interpreta a partir de lo que el
-// alumno describe en su respuesta.
-function contextoTarea(fase: Fase, tarea: Tarea, numeroIntento: number) {
+// criterio de corrección por tipo de tarea, mismo texto en español. El tipo
+// de TFM, si el alumno lo ha indicado, se antepone en contextoTarea(); si
+// no, las variantes por tipo de estudio quedan como orientación dentro del
+// propio texto, que la IA interpreta a partir de lo que el alumno describe.
+function contextoTareaPorTipoDeTarea(fase: Fase, tarea: Tarea, numeroIntento: number) {
   const base = `Fase del TFM: ${fase.titulo}. Tarea: ${tarea.titulo}. Intento nº ${numeroIntento} del alumno en esta tarea.`;
   if (tarea.tipo === "tema") {
     return base + " El alumno describe su TEMA de TFM. Ayúdale a delimitarlo: señala si es demasiado amplio, vago o poco factible; valóralo con los criterios FINER; indica qué decisiones le faltan por tomar (población concreta, contexto, variable de interés) y hazle 2-3 preguntas que le ayuden a centrarlo. No le des el tema resuelto ni se lo elijas tú. IMPORTANTE: en esta fase basta con identificar población, contexto y variable de interés a nivel general; NO exijas todavía el instrumento de medida, el modelo teórico concreto (p.ej. un cuestionario o marco conceptual específico) ni el plan de análisis — eso corresponde a la fase de Metodología, más adelante.";
@@ -117,7 +132,7 @@ Deno.serve(async (req) => {
     // para no depender de qué RLS vea el propio caller.
     const { data: alumno, error: alumnoError } = await adminClient
       .from("alumnos")
-      .select("id")
+      .select("id, tipo_tfm")
       .eq("id", alumnoId)
       .single();
     if (alumnoError || !alumno) {
@@ -200,7 +215,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const contexto = contextoPrevio + contextoTarea(fase, tarea, (intentosPrevios ?? 0) + 1);
+    const contexto = contextoPrevio + contextoTarea(fase, tarea, (intentosPrevios ?? 0) + 1, alumno.tipo_tfm ?? null);
 
     let feedback: string;
     try {

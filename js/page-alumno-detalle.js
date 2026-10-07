@@ -1,6 +1,7 @@
 import { requireAnyRole } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
+import { nombreTipoTfm } from "./tipos-tfm.js";
 import {
   fetchAlumnoDetalle, fetchFases, fetchEnviosDeAlumno, solicitarDescarga, logActivity,
 } from "./api.js";
@@ -43,7 +44,7 @@ async function render(rolCaller) {
     <div class="header row-between">
       <div>
         <h1>${escapeHtml(alumno.full_name || alumno.email)}</h1>
-        <p>${escapeHtml(alumno.alumnos?.codigo || "")}</p>
+        <p>${escapeHtml(alumno.alumnos?.codigo || "")} · ${escapeHtml(nombreTipoTfm(alumno.alumnos?.tipo_tfm) || "Tipo de TFM sin indicar")}</p>
       </div>
       <button class="btn-secundario btn-small" id="exportar">Exportar a Word</button>
     </div>

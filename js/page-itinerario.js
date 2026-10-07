@@ -1,7 +1,10 @@
 import { requireAlumno, getProfile } from "./auth.js";
 import { mountNav } from "./nav.js";
 import { escapeHtml } from "./escape.js";
-import { fetchMiAlumno, fetchFases, fetchFasesEstado, fetchEnviosDeAlumno, aceptarPrivacidad } from "./api.js";
+import {
+  fetchMiAlumno, fetchFases, fetchFasesEstado, fetchEnviosDeAlumno, aceptarPrivacidad, actualizarTipoTfm,
+} from "./api.js";
+import { TIPOS_TFM } from "./tipos-tfm.js";
 import { exportarItinerarioWord } from "./exportar-word.js";
 
 const auth = await requireAlumno();
@@ -81,6 +84,16 @@ async function render(userId) {
       <button class="btn-secundario btn-small" id="exportar">Exportar a Word</button>
     </div>
     <p id="export-error" class="error-msg" hidden></p>
+    <div class="card" style="margin-bottom:16px">
+      <label for="tipo-tfm">Tipo de TFM</label>
+      <select id="tipo-tfm" style="max-width:320px">
+        <option value="">Sin indicar</option>
+        ${TIPOS_TFM.map((t) => `<option value="${t.id}" ${alumno.tipo_tfm === t.id ? "selected" : ""}>${escapeHtml(t.nombre)}</option>`).join("")}
+      </select>
+      <p class="muted" id="tipo-tfm-desc" style="margin-top:8px"></p>
+      <p class="muted" style="margin-top:4px;font-size:12px">El tutor IA adapta sus correcciones a este tipo. Si dudas, consúltalo con tu tutor/a académico/a; puedes cambiarlo cuando quieras.</p>
+      <p id="tipo-tfm-error" class="error-msg" hidden></p>
+    </div>
     <ol class="itinerario">
       ${fases.map((f) => `
         <li class="itinerario-item">
@@ -93,6 +106,32 @@ async function render(userId) {
       `).join("")}
     </ol>
   `;
+
+  const selectTipo = document.getElementById("tipo-tfm");
+  const descTipo = document.getElementById("tipo-tfm-desc");
+  const pintarDescripcion = () => {
+    descTipo.textContent = TIPOS_TFM.find((t) => t.id === selectTipo.value)?.descripcion
+      ?? "Indica qué tipo de trabajo estás haciendo para que la corrección se ajuste a él.";
+  };
+  pintarDescripcion();
+  let tipoGuardado = selectTipo.value;
+  selectTipo.addEventListener("change", async () => {
+    const errorEl = document.getElementById("tipo-tfm-error");
+    errorEl.hidden = true;
+    pintarDescripcion();
+    selectTipo.disabled = true;
+    try {
+      await actualizarTipoTfm(selectTipo.value);
+      tipoGuardado = selectTipo.value;
+    } catch (err) {
+      selectTipo.value = tipoGuardado;
+      pintarDescripcion();
+      errorEl.textContent = "No se pudo guardar el tipo de TFM: " + err.message;
+      errorEl.hidden = false;
+    } finally {
+      selectTipo.disabled = false;
+    }
+  });
 
   document.getElementById("exportar").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
